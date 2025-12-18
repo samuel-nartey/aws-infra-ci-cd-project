@@ -1,0 +1,47 @@
+name: CI-CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Tests
+      run: npm test
+
+    - name: Zip Application
+      run: zip -r app.zip .
+
+    - name: Upload to S3
+      run: |
+        aws s3 cp app.zip s3://${{ secrets.S3_BUCKET }}/app.zip
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy with CodeDeploy
+      run: |
+        aws deploy create-deployment \
+          --ci-cd-stack-CodeDeployApp-FutTs3LriIsB ${{ secrets.APPLICATION_NAME }} \
+          --ci-cd-stack-CodeDeployGroup-294W082UZBF6 ${{ secrets.DEPLOYMENT_GROUP }} \
+          --ci-cd-stack-deploymentbucket-nt7t0b0mofgy=${{ secrets.S3_BUCKET }},key=app.zip,bundleType=zip
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
