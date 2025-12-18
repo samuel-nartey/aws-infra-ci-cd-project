@@ -38,10 +38,11 @@ jobs:
     - name: Deploy with CodeDeploy
       run: |
         aws deploy create-deployment \
-          --ci-cd-stack-CodeDeployApp-FutTs3LriIsB ${{ secrets.APPLICATION_NAME }} \
-          --ci-cd-stack-CodeDeployGroup-294W082UZBF6 ${{ secrets.DEPLOYMENT_GROUP }} \
-          --ci-cd-stack-deploymentbucket-nt7t0b0mofgy=${{ secrets.S3_BUCKET }},key=app.zip,bundleType=zip
+          --application-name ${{ secrets.APPLICATION_NAME }} \
+          --deployment-group-name ${{ secrets.DEPLOYMENT_GROUP }} \
+          --s3-location bucket=${{ secrets.S3_BUCKET }},key=app.zip,bundleType=zip
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ${{ secrets.AWS_REGION }}
+
