@@ -6,10 +6,42 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Description: EC2 SSH Key
 
+  VPCId:
+    Type: String
+    Description: "(Optional) VPC Id to attach security group to; leave blank to use default VPC"
+    Default: ""
+
 Resources:
 
   # ===============================
-  # EC2 IAM Role (for the instance)
+  # EC2 Security Group
+  # ===============================
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and Node.js
+      VpcId: !If 
+        - HasVPC
+        - !Ref VPCId
+        - !Ref "AWS::NoValue"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+
+  # ===============================
+  # Conditions
+  # ===============================
+  HasVPC:
+    !Not [ !Equals [ !Ref VPCId, "" ] ]
+
+  # ===============================
+  # EC2 IAM Role
   # ===============================
   EC2Role:
     Type: AWS::IAM::Role
@@ -31,9 +63,9 @@ Resources:
       Roles:
         - !Ref EC2Role
 
-  # ======================================
-  # CodeDeploy IAM Role (for deployment group)
-  # ======================================
+  # ===============================
+  # CodeDeploy IAM Role
+  # ===============================
   CodeDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -47,21 +79,21 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole
 
-  # ============================
+  # ===============================
   # S3 Bucket for deployment
-  # ============================
+  # ===============================
   DeploymentBucket:
     Type: AWS::S3::Bucket
 
-  # ============================
+  # ===============================
   # CodeDeploy Application
-  # ============================
+  # ===============================
   CodeDeployApp:
     Type: AWS::CodeDeploy::Application
 
-  # ===========================================
-  # CodeDeploy Deployment Group (uses CodeDeployRole)
-  # ===========================================
+  # ===============================
+  # CodeDeploy Deployment Group
+  # ===============================
   CodeDeployGroup:
     Type: AWS::CodeDeploy::DeploymentGroup
     Properties:
@@ -69,9 +101,9 @@ Resources:
       ServiceRoleArn: !GetAtt CodeDeployRole.Arn
       DeploymentConfigName: CodeDeployDefault.AllAtOnce
 
-  # ============================
+  # ===============================
   # EC2 Instance
-  # ============================
+  # ===============================
   EC2Instance:
     Type: AWS::EC2::Instance
     Properties:
@@ -79,13 +111,12 @@ Resources:
       KeyName: !Ref KeyName
       ImageId: ami-0c02fb55956c7d316
       IamInstanceProfile: !Ref EC2InstanceProfile
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
       UserData:
         Fn::Base64: |
           #!/bin/bash
           yum update -y
           yum install -y ruby nodejs
           cd /home/ec2-user
-          wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
-          chmod +x install
-          ./install auto
-          service codedeploy-agent start
+          wget https://aws-codedeploy-us-e
