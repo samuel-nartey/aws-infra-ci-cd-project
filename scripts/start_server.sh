@@ -1,3 +1,5 @@
 #!/bin/bash
 cd /home/ec2-user/app
-nohup npm start > app.log 2>&1 &
+npm install -g pm2
+pm2 start app.js || pm2 restart app.js
+pm2 save
